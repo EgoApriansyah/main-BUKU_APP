@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/book_model.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/bookmark_provider.dart';
-import '../../services/bukuacak_service.dart';
-import '../detail/book_detail.dart';
-import '../search/search_page.dart';
-import '../bookmark/bookmark_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,202 +12,237 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<List<Book>> _futureBooks;
-  int _currentPage = 1;
-  final ScrollController _scrollController = ScrollController();
-  bool _isLoadingMore = false;
-  List<Book> _books = [];
-  int _selectedIndex = 0;
+  late YoutubePlayerController _ytController;
 
   @override
   void initState() {
     super.initState();
-    _loadBooks();
-    _scrollController.addListener(_scrollListener);
+    // Inisialisasi video YouTube: 10 List Buku Terbaik 2026
+    _ytController = YoutubePlayerController(
+      initialVideoId: 'WRQbaNK1irI',
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+        mute: false,
+        disableDragSeek: false,
+        loop: false,
+        isLive: false,
+        forceHD: false,
+        enableCaption: true,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _ytController.dispose();
     super.dispose();
-  }
-
-  void _scrollListener() {
-    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
-      _loadMoreBooks();
-    }
-  }
-
-  void _loadBooks() {
-    _futureBooks = BukuAcakService.getBooks(page: _currentPage);
-    _futureBooks.then((books) {
-      if (mounted) {
-        setState(() {
-          _books = books;
-        });
-      }
-    });
-  }
-
-  void _loadMoreBooks() {
-    if (!_isLoadingMore) {
-      setState(() {
-        _isLoadingMore = true;
-      });
-
-      _currentPage++;
-      BukuAcakService.getBooks(page: _currentPage).then((newBooks) {
-        if (mounted) {
-          setState(() {
-            _books.addAll(newBooks);
-            _isLoadingMore = false;
-          });
-        }
-      }).catchError((error) {
-        if (mounted) {
-          setState(() {
-            _isLoadingMore = false;
-          });
-        }
-      });
-    }
-  }
-
-  void _refreshBooks() {
-    setState(() {
-      _currentPage = 1;
-      _books = [];
-    });
-    _loadBooks();
   }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final bookmarkProvider = Provider.of<BookmarkProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Rak Kita', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Container(
-        color: Colors.white,
-        child: RefreshIndicator(
-          onRefresh: () async => _refreshBooks(),
-          child: FutureBuilder<List<Book>>(
-            future: _futureBooks,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting && _books.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError && _books.isEmpty) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              } else if (_books.isEmpty) {
-                return const Center(child: Text('No books found'));
-              } else {
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _books.length + (_isLoadingMore ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _books.length) {
-                      return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
-                    }
-                    final book = _books[index];
-                    final isBookmarked = bookmarkProvider.isBookmarked(book.id);
+      backgroundColor: const Color(0xFFF8FAFF),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Custom Elegant App Bar
+          SliverAppBar(
+            expandedHeight: 100,
+            floating: true,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: const Color(0xFFF8FAFF),
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+              title: Row(
+                children: [
+                  const Text(
+                    "Rak Kita",
+                    style: TextStyle(
+                      color: Color(0xFF1A1A1A),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 20),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.blueAccent.withOpacity(0.1),
+                      child: const Icon(Icons.notifications_none_rounded, color: Colors.blueAccent, size: 20),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: InkWell(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BookDetailPage(book: book))),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Welcome Text
+                  Text(
+                    "Halo, ${authProvider.user?.username ?? 'Pembaca'}! 👋",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                  ),
+                  const Text(
+                    "Mau baca apa hari ini?",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+
+                  // YouTube Recommendation Card (Featured)
+                  _buildSectionHeader("Rekomendasi Video", "Lihat Semua"),
+                  const SizedBox(height: 15),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blueAccent.withOpacity(0.15),
+                          blurRadius: 25,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: YoutubePlayer(
+                        controller: _ytController,
+                        showVideoProgressIndicator: true,
+                        progressIndicatorColor: Colors.blueAccent,
+                        bottomActions: [
+                          CurrentPosition(),
+                          ProgressBar(isExpanded: true),
+                          FullScreenButton(),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "10 List Buku Terbaik 2026 (5 Industri)",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  ),
+                  const Text(
+                    "Tips mindset, soft skills, dan produktivitas dari Fardi Yandi.",
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  
+                  const SizedBox(height: 35),
+
+                  // Category Selector
+                  _buildSectionHeader("Kategori Populer", null),
+                  const SizedBox(height: 15),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        _buildCategoryChip("📚 Semua", true),
+                        _buildCategoryChip("🧠 Mindset", false),
+                        _buildCategoryChip("💼 Bisnis", false),
+                        _buildCategoryChip("🎨 Kreatif", false),
+                        _buildCategoryChip("⏳ Produktif", false),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 35),
+
+                  // Promotion / Info Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF3B82F6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // --- BAGIAN PERBAIKAN GAMBAR ---
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  book.coverImage,
-                                  width: 80,
-                                  height: 120,
-                                  fit: BoxFit.cover,
-                                  // Menangani jika gambar gagal load (Error 404 dll)
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 80,
-                                      height: 120,
-                                      color: Colors.grey.shade200,
-                                      child: const Icon(Icons.book, color: Colors.grey, size: 40),
-                                    );
-                                  },
-                                ),
+                              Text(
+                                "Mulai Petualanganmu",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                               ),
-                              // ------------------------------
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(book.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                    const SizedBox(height: 4),
-                                    Text(book.author, style: TextStyle(color: Colors.grey.shade600)),
-                                    const SizedBox(height: 8),
-                                    Text(book.summary, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border, color: isBookmarked ? Colors.blue : null),
-                                onPressed: () async {
-                                  if (isBookmarked) {
-                                    final b = bookmarkProvider.getBookmarkByBookId(book.id);
-                                    if (b != null) await bookmarkProvider.deleteBookmark(b);
-                                  } else {
-                                    await bookmarkProvider.addBookmark(authProvider.user!.id, book);
-                                  }
-                                },
+                              SizedBox(height: 8),
+                              Text(
+                                "Jelajahi ribuan koleksi buku digital terbaik kami.",
+                                style: TextStyle(color: Colors.white70, fontSize: 13),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              }
-            },
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: () {}, // Nanti bisa arahkan ke tab Jelajahi
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            elevation: 0,
+                          ),
+                          child: const Text("Jelajahi", style: TextStyle(fontWeight: FontWeight.bold)),
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 50),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
-        elevation: 10,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
-          if (index == 1) {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const BookmarkPage()));
-          } else if (index == 2) {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchPage()));
-          } else if (index == 3) {
-            authProvider.logout();
-            Navigator.of(context).pushReplacementNamed('/login');
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Simpan'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Cari'),
-          BottomNavigationBarItem(icon: Icon(Icons.logout), label: 'Keluar'),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String? action) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+        if (action != null)
+          Text(action, style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.w600, fontSize: 13)),
+      ],
+    );
+  }
+
+  Widget _buildCategoryChip(String label, bool isSelected) {
+    return Container(
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.blueAccent : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: isSelected 
+          ? [BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]
+          : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : const Color(0xFF1A1A1A),
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
       ),
     );
   }

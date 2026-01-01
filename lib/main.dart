@@ -5,7 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/bookmark_provider.dart';
 import 'utils/notification_helper.dart';
 import 'views/auth/login_page.dart';
-import 'views/home/home_page.dart';
+import 'views/main_navigation.dart'; // IMPORT FILE BARU INI
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +44,8 @@ class MyApp extends StatelessWidget {
         home: const AuthWrapper(),
         routes: {
           '/login': (_) => const LoginPage(),
-          '/home': (_) => const HomePage(),
+          // Ubah rute /home agar mengarah ke MainNavigation agar navbar selalu ada
+          '/home': (_) => const MainNavigation(), 
         },
       ),
     );
@@ -52,7 +53,7 @@ class MyApp extends StatelessWidget {
 }
 
 /// ===============================================================
-/// AUTH WRAPPER (SUDAH FIX LOOP & ERROR setState during build)
+/// AUTH WRAPPER (FIXED)
 /// ===============================================================
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -67,7 +68,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    // Panggil SEKALI SAJA
     _authFuture = context.read<AuthProvider>().checkAuthStatus();
   }
 
@@ -76,7 +76,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return FutureBuilder<void>(
       future: _authFuture,
       builder: (context, snapshot) {
-        // Loading awal
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
@@ -87,12 +86,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         final authProvider = context.watch<AuthProvider>();
 
-        // Sudah login
+        // PERUBAHAN DISINI:
+        // Jika sudah login, arahkan ke MainNavigation (yang berisi 4 Tab)
+        // Bukan ke HomePage secara langsung.
         if (authProvider.isAuthenticated) {
-          return const HomePage();
+          return const MainNavigation();
         }
 
-        // Belum login
         return const LoginPage();
       },
     );

@@ -17,7 +17,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
   @override
   void initState() {
     super.initState();
-    // Memanggil data setelah frame selesai untuk menghindari error build
+    // Memanggil data setelah frame selesai
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -27,7 +27,6 @@ class _BookmarkPageState extends State<BookmarkPage> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final bookmarkProvider = Provider.of<BookmarkProvider>(context, listen: false);
     
-    // Perbaikan: Pastikan user tidak null sebelum memanggil ID
     if (authProvider.user != null) {
       bookmarkProvider.loadBookmarks(authProvider.user!.id);
     }
@@ -35,118 +34,179 @@ class _BookmarkPageState extends State<BookmarkPage> {
 
   @override
   Widget build(BuildContext context) {
-    // listen: true di sini agar UI update saat isLoading berubah
     final authProvider = Provider.of<AuthProvider>(context);
     final bookmarkProvider = Provider.of<BookmarkProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Bookmarks', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
+      backgroundColor: const Color(0xFFF8FAFF), // Soft White/Blue khas Dribbble
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Header Modern
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: true,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: const Color(0xFFF8FAFF),
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+              title: const Text(
+                'My Bookmarks',
+                style: TextStyle(
+                  color: Color(0xFF1A1A1A),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                ),
+              ),
+            ),
           ),
-        ),
-        // Cek apakah user sudah login
-        child: authProvider.user == null 
-          ? const Center(child: Text("Silahkan login terlebih dahulu"))
-          : _buildContent(bookmarkProvider, authProvider),
+
+          // Cek Status Login & Data
+          SliverFillRemaining(
+            hasScrollBody: true,
+            child: authProvider.user == null 
+              ? _buildEmptyState(Icons.lock_outline, "Please login to see bookmarks")
+              : _buildContent(bookmarkProvider),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildContent(BookmarkProvider bookmarkProvider, AuthProvider authProvider) {
+  Widget _buildContent(BookmarkProvider bookmarkProvider) {
     if (bookmarkProvider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (bookmarkProvider.errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(bookmarkProvider.errorMessage!, style: const TextStyle(color: Colors.red)),
-            ElevatedButton(onPressed: _loadData, child: const Text("Coba Lagi"))
-          ],
-        ),
-      );
+      return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
     }
 
     if (bookmarkProvider.bookmarks.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.bookmark_border, size: 100, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('Belum ada bookmark.', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
+      return _buildEmptyState(Icons.bookmark_add_outlined, "No books saved yet.");
     }
 
     return RefreshIndicator(
       onRefresh: () async => _loadData(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
         itemCount: bookmarkProvider.bookmarks.length,
         itemBuilder: (context, index) {
           final bookmark = bookmarkProvider.bookmarks[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: InkWell(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => BookDetailPage(book: bookmark.toBook())),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        bookmark.bookCover,
-                        width: 80, height: 120, fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 80, height: 120, color: Colors.grey.shade300,
-                          child: const Icon(Icons.broken_image),
-                        ),
+          return _buildModernBookmarkCard(bookmark);
+        },
+      ),
+    );
+  }
+
+  Widget _buildModernBookmarkCard(Bookmark bookmark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => BookDetailPage(book: bookmark.toBook())),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // Book Image with Soft Shadow
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blueGrey.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(4, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      bookmark.bookCover,
+                      width: 85,
+                      height: 120,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 85, height: 120, color: Colors.grey.shade200,
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                // Book Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bookmark.bookTitle,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, height: 1.2),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        bookmark.bookAuthor,
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(bookmark.bookTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 2),
-                          const SizedBox(height: 4),
-                          Text('Penulis: ${bookmark.bookAuthor}', style: TextStyle(color: Colors.grey.shade600)),
-                          const SizedBox(height: 8),
-                          Text('Simpan: ${_formatDate(bookmark.createdAt)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                          Text(
+                            'Saved: ${_formatDate(bookmark.createdAt)}',
+                            style: const TextStyle(fontSize: 10, color: Colors.blueAccent, fontWeight: FontWeight.w600),
+                          ),
+                          GestureDetector(
+                            onTap: () => _showDeleteConfirmation(context, bookmark),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _showDeleteConfirmation(context, bookmark),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(IconData icon, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 100, color: Colors.blue.withOpacity(0.1)),
+          const SizedBox(height: 16),
+          Text(message, style: TextStyle(color: Colors.grey.shade400, fontSize: 16)),
+        ],
       ),
     );
   }
@@ -162,16 +222,22 @@ class _BookmarkPageState extends State<BookmarkPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Bookmark'),
-        content: Text('Yakin ingin menghapus "${bookmark.bookTitle}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Remove Bookmark?'),
+        content: Text('Delete "${bookmark.bookTitle}" from your saved list?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          TextButton(
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               Provider.of<BookmarkProvider>(context, listen: false).deleteBookmark(bookmark);
             },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            child: const Text('Remove', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -179,6 +245,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
   }
 }
 
+// Extension untuk memperbaiki error toBook() tanpa merubah model file asli
 extension BookmarkToBook on Bookmark {
   Book toBook() {
     return Book(
@@ -186,8 +253,8 @@ extension BookmarkToBook on Bookmark {
       title: bookTitle,
       coverImage: bookCover,
       author: bookAuthor,
-      category: '',
-      summary: '',
+      category: 'Saved', 
+      summary: '', // Akan di-load ulang di detail page jika perlu
       details: {},
       tags: [],
     );

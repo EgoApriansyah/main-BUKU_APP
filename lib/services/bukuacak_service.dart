@@ -20,18 +20,28 @@ class BukuAcakService {
   }
 
   static Future<List<Book>> searchBooks(String query) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl?search=$query'),
-    );
+  // 1. Ambil semua buku dulu (atau gunakan endpoint search yang benar jika ada)
+  final response = await http.get(Uri.parse(_baseUrl));
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
-      final List<dynamic> booksJson = data['books'];
-      return booksJson.map((json) => Book.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to search books');
-    }
+  if (response.statusCode == 200) {
+    final Map<String, dynamic> data = json.decode(response.body);
+    final List<dynamic> booksJson = data['books'];
+    
+    // 2. Ubah jadi list object Book
+    List<Book> allBooks = booksJson.map((json) => Book.fromJson(json)).toList();
+
+    // 3. Filter manual berdasarkan judul atau penulis
+    return allBooks.where((book) {
+      final titleLower = book.title.toLowerCase();
+      final authorLower = book.author.toLowerCase();
+      final searchLower = query.toLowerCase();
+      
+      return titleLower.contains(searchLower) || authorLower.contains(searchLower);
+    }).toList();
+  } else {
+    throw Exception('Failed to load books');
   }
+}
 
   static Future<Book> getBookById(String id) async {
     final response = await http.get(
