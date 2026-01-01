@@ -13,11 +13,12 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
 
-  // Check if user is logged in on app start
+  /// ============================
+  /// CHECK AUTH (APP START)
+  /// ============================
+  /// ❌ TANPA loading
+  /// ❌ TANPA notifyListeners di awal
   Future<void> checkAuthStatus() async {
-    _isLoading = true;
-    notifyListeners();
-
     try {
       final user = await AuthService.getUser();
       if (user != null) {
@@ -27,11 +28,12 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = e.toString();
     }
 
-    _isLoading = false;
-    notifyListeners();
+    notifyListeners(); // aman (dipanggil SETELAH await)
   }
 
-  // Login user
+  /// ============================
+  /// LOGIN
+  /// ============================
   Future<bool> login(String username, String password) async {
     _isLoading = true;
     _errorMessage = null;
@@ -39,7 +41,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final response = await ApiService.login(username, password);
-      
+
       if (response['status'] == 1) {
         _user = User.fromJson(response['user']);
         await AuthService.saveUser(_user!);
@@ -57,15 +59,18 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Register user
+  /// ============================
+  /// REGISTER
+  /// ============================
   Future<bool> register(String username, String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final response = await ApiService.register(username, email, password);
-      
+      final response =
+          await ApiService.register(username, email, password);
+
       if (response['status'] == 1) {
         _user = User.fromJson(response['user']);
         await AuthService.saveUser(_user!);
@@ -83,7 +88,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Logout user
+  /// ============================
+  /// LOGOUT
+  /// ============================
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
@@ -99,7 +106,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Clear error message
+  /// ============================
+  /// CLEAR ERROR
+  /// ============================
   void clearError() {
     _errorMessage = null;
     notifyListeners();

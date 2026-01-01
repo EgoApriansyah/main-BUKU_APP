@@ -18,7 +18,9 @@ class BookDetailPage extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // App bar with book cover
+          /// ===============================
+          /// APP BAR + COVER
+          /// ===============================
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
@@ -29,7 +31,7 @@ class BookDetailPage extends StatelessWidget {
                   Image.network(
                     book.coverImage,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
+                    errorBuilder: (_, __, ___) {
                       return Container(
                         color: Colors.grey.shade300,
                         child: const Icon(Icons.book, size: 100),
@@ -59,13 +61,12 @@ class BookDetailPage extends StatelessWidget {
                 ),
                 onPressed: () async {
                   if (isBookmarked) {
-                    // Remove bookmark
-                    final bookmark = bookmarkProvider.getBookmarkByBookId(book.id);
+                    final bookmark =
+                        bookmarkProvider.getBookmarkByBookId(book.id);
                     if (bookmark != null) {
                       await bookmarkProvider.deleteBookmark(bookmark);
                     }
                   } else {
-                    // Add bookmark
                     await bookmarkProvider.addBookmark(
                       authProvider.user!.id,
                       book,
@@ -75,15 +76,17 @@ class BookDetailPage extends StatelessWidget {
               ),
             ],
           ),
-          
-          // Book details
+
+          /// ===============================
+          /// CONTENT
+          /// ===============================
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
+                  /// TITLE
                   Text(
                     book.title,
                     style: const TextStyle(
@@ -92,24 +95,24 @@ class BookDetailPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  
-                  // Author and category
-                  Row(
+
+                  /// AUTHOR & CATEGORY
+                  Wrap(
+                    spacing: 8,
                     children: [
                       Chip(
-                        label: Text('Author: ${book.author}'),
+                        label: Text(book.author),
                         backgroundColor: Colors.blue.shade100,
                       ),
-                      const SizedBox(width: 8),
                       Chip(
-                        label: Text('Category: ${book.category}'),
+                        label: Text(book.category),
                         backgroundColor: Colors.green.shade100,
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Book details
+
+                  /// BOOK DETAILS
                   const Text(
                     'Book Details',
                     style: TextStyle(
@@ -126,24 +129,32 @@ class BookDetailPage extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        if (book.details['isbn'] != null && book.details['isbn'] != '0')
-                          _buildDetailRow('ISBN', book.details['isbn']),
-                        if (book.details['price'] != null && book.details['price'] != '')
-                          _buildDetailRow('Price', book.details['price']),
-                        if (book.details['total_pages'] != null && book.details['total_pages'] != '')
-                          _buildDetailRow('Total Pages', book.details['total_pages']),
-                        if (book.details['size'] != null && book.details['size'] != '')
-                          _buildDetailRow('Size', book.details['size']),
-                        if (book.details['published_date'] != null && book.details['published_date'] != '')
-                          _buildDetailRow('Published Date', book.details['published_date']),
-                        if (book.details['format'] != null && book.details['format'] != '')
-                          _buildDetailRow('Format', book.details['format']),
+                        if (_isValid(book.details['isbn']))
+                          _buildDetailRow(
+                              'ISBN', book.details['isbn']),
+                        if (_isValid(book.details['price']))
+                          _buildDetailRow(
+                              'Price', book.details['price']),
+                        if (_isValid(book.details['total_pages']))
+                          _buildDetailRow(
+                              'Total Pages',
+                              book.details['total_pages']),
+                        if (_isValid(book.details['size']))
+                          _buildDetailRow(
+                              'Size', book.details['size']),
+                        if (_isValid(book.details['published_date']))
+                          _buildDetailRow(
+                              'Published Date',
+                              book.details['published_date']),
+                        if (_isValid(book.details['format']))
+                          _buildDetailRow(
+                              'Format', book.details['format']),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Summary
+
+                  /// SUMMARY
                   const Text(
                     'Summary',
                     style: TextStyle(
@@ -154,11 +165,11 @@ class BookDetailPage extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     book.summary,
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Tags
+
+                  /// TAGS (🔥 FIXED)
                   if (book.tags.isNotEmpty) ...[
                     const Text(
                       'Tags',
@@ -172,9 +183,24 @@ class BookDetailPage extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: book.tags.map((tag) {
+                        final tagName = tag is Map
+                            ? tag['name']?.toString() ?? ''
+                            : tag.toString();
+
+                        if (tagName.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+
                         return Chip(
-                          label: Text(tag.toString()),
+                          label: Text(
+                            tagName,
+                            style: const TextStyle(fontSize: 13),
+                          ),
                           backgroundColor: Colors.purple.shade100,
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         );
                       }).toList(),
                     ),
@@ -189,9 +215,16 @@ class BookDetailPage extends StatelessWidget {
     );
   }
 
+  /// ===============================
+  /// HELPER
+  /// ===============================
+  static bool _isValid(dynamic value) {
+    return value != null && value.toString().isNotEmpty && value != '0';
+  }
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -199,14 +232,10 @@ class BookDetailPage extends StatelessWidget {
             width: 120,
             child: Text(
               '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );

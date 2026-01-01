@@ -18,14 +18,15 @@ class Bookmark {
   });
 
   factory Bookmark.fromJson(Map<String, dynamic> json) {
-    return Bookmark(
-      id: json['id'] ?? 0,
-      userId: json['user_id'] ?? 0,
-      bookId: json['book_id'] ?? '',
-      bookTitle: json['book_title'] ?? '',
-      bookAuthor: json['book_author'] ?? '',
-      bookCover: json['book_cover'] ?? '',
-      createdAt: json['created_at'] ?? '',
-    );
-  }
+  return Bookmark(
+    id: int.parse(json['id'].toString()),
+    userId: int.parse(json['user_id'].toString()),
+    bookId: json['book_id'].toString(),
+    bookTitle: json['book_title'] ?? '',
+    bookAuthor: json['book_author'] ?? '',
+    bookCover: json['book_cover'] ?? '',
+    createdAt: json['created_at'] ?? '',
+  );
+}
+
 }

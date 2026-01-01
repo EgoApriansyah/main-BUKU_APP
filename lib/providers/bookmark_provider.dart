@@ -5,7 +5,7 @@ import '../services/api_service.dart';
 import '../utils/notification_helper.dart';
 
 class BookmarkProvider with ChangeNotifier {
-  List<Bookmark> _bookmarks = [];
+  final List<Bookmark> _bookmarks = [];
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -13,26 +13,37 @@ class BookmarkProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // Load bookmarks for a user
+  // ===================================
+  // LOAD BOOKMARKS (DIAMBIL DARI MYSQL)
+  // ===================================
   Future<void> loadBookmarks(int userId) async {
     _isLoading = true;
+    // Kita panggil notify agar UI menampilkan loading indicator
     notifyListeners();
 
     try {
-      final bookmarks = await ApiService.getBookmarks(userId);
-      _bookmarks = bookmarks.map((json) => Bookmark.fromJson(json)).toList();
-    } catch (e) {
-      _errorMessage = e.toString();
-    }
+      // API kamu mengembalikan List<dynamic> secara langsung
+      final List<dynamic> data = await ApiService.getBookmarks(userId);
 
-    _isLoading = false;
-    notifyListeners();
+      _bookmarks.clear();
+      // Mengubah List JSON menjadi List Object Bookmark
+      _bookmarks.addAll(data.map((json) => Bookmark.fromJson(json)).toList());
+      
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = "Gagal memuat bookmark: ${e.toString()}";
+      print("Error Load Bookmark: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  // Add a bookmark
+  // ===================================
+  // ADD BOOKMARK
+  // ===================================
   Future<bool> addBookmark(int userId, Book book) async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -43,17 +54,16 @@ class BookmarkProvider with ChangeNotifier {
         book.author,
         book.coverImage,
       );
-      
+
+      // Sesuai api.php: status 1 berarti sukses
       if (response['status'] == 1) {
-        // Refresh bookmarks
+        // Setelah sukses di DB, kita tarik data terbaru agar sinkron
         await loadBookmarks(userId);
-        
-        // Show notification
+
         await NotificationHelper.showNotification(
           'Bookmark Added',
-          'You have added "${book.title}" to your bookmarks',
+          '"${book.title}" ditambahkan ke bookmark',
         );
-        
         return true;
       } else {
         _errorMessage = response['message'];
@@ -68,63 +78,24 @@ class BookmarkProvider with ChangeNotifier {
     }
   }
 
-  // Update a bookmark
-  Future<bool> updateBookmark(Bookmark bookmark) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final response = await ApiService.updateBookmark(
-        bookmark.id,
-        bookmark.bookTitle,
-        bookmark.bookAuthor,
-        bookmark.bookCover,
-      );
-      
-      if (response['status'] == 1) {
-        // Refresh bookmarks
-        await loadBookmarks(bookmark.userId);
-        
-        // Show notification
-        await NotificationHelper.showNotification(
-          'Bookmark Updated',
-          'You have updated "${bookmark.bookTitle}" bookmark',
-        );
-        
-        return true;
-      } else {
-        _errorMessage = response['message'];
-        return false;
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Delete a bookmark
+  // ===================================
+  // DELETE BOOKMARK
+  // ===================================
   Future<bool> deleteBookmark(Bookmark bookmark) async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
 
     try {
       final response = await ApiService.deleteBookmark(bookmark.id);
-      
+
       if (response['status'] == 1) {
-        // Refresh bookmarks
-        await loadBookmarks(bookmark.userId);
-        
-        // Show notification
+        // Hapus dari list lokal agar UI langsung update
+        _bookmarks.removeWhere((b) => b.id == bookmark.id);
+
         await NotificationHelper.showNotification(
           'Bookmark Deleted',
-          'You have removed "${bookmark.bookTitle}" from your bookmarks',
+          '"${bookmark.bookTitle}" dihapus',
         );
-        
         return true;
       } else {
         _errorMessage = response['message'];
@@ -139,23 +110,18 @@ class BookmarkProvider with ChangeNotifier {
     }
   }
 
-  // Check if a book is bookmarked
+  // ===================================
+  // HELPER UNTUK CEK STATUS (DI DETAIL)
+  // ===================================
   bool isBookmarked(String bookId) {
-    return _bookmarks.any((bookmark) => bookmark.bookId == bookId);
+    return _bookmarks.any((b) => b.bookId == bookId);
   }
 
-  // Get bookmark by book ID
   Bookmark? getBookmarkByBookId(String bookId) {
     try {
-      return _bookmarks.firstWhere((bookmark) => bookmark.bookId == bookId);
-    } catch (e) {
+      return _bookmarks.firstWhere((b) => b.bookId == bookId);
+    } catch (_) {
       return null;
     }
-  }
-
-  // Clear error message
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
   }
 }

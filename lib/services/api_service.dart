@@ -36,15 +36,21 @@ class ApiService {
   }
 
   // Bookmark Operations
+  // Bookmark Operations
   static Future<List<dynamic>> getBookmarks(int userId) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl?action=get_bookmarks&user_id=$userId'),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl?action=get_bookmarks&user_id=$userId'),
+      );
 
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load bookmarks');
+      if (response.statusCode == 200) {
+        // API.php mengembalikan array [] jika kosong atau ada isinya
+        return json.decode(response.body);
+      } else {
+        throw Exception('Server Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Koneksi Gagal: $e');
     }
   }
 

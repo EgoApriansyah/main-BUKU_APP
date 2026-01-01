@@ -21,6 +21,7 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingMore = false;
   List<Book> _books = [];
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -44,9 +45,11 @@ class _HomePageState extends State<HomePage> {
   void _loadBooks() {
     _futureBooks = BukuAcakService.getBooks(page: _currentPage);
     _futureBooks.then((books) {
-      setState(() {
-        _books = books;
-      });
+      if (mounted) {
+        setState(() {
+          _books = books;
+        });
+      }
     });
   }
 
@@ -55,17 +58,21 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _isLoadingMore = true;
       });
-      
+
       _currentPage++;
       BukuAcakService.getBooks(page: _currentPage).then((newBooks) {
-        setState(() {
-          _books.addAll(newBooks);
-          _isLoadingMore = false;
-        });
+        if (mounted) {
+          setState(() {
+            _books.addAll(newBooks);
+            _isLoadingMore = false;
+          });
+        }
       }).catchError((error) {
-        setState(() {
-          _isLoadingMore = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoadingMore = false;
+          });
+        }
       });
     }
   }
@@ -85,96 +92,24 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buku App'),
-        backgroundColor: Colors.transparent,
+        title: const Text('Rak Kita', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SearchPage(),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.bookmark),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const BookmarkPage(),
-                ),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'logout') {
-                authProvider.logout();
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Logout'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+        centerTitle: true,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade50,
-              Colors.white,
-            ],
-          ),
-        ),
+        color: Colors.white,
         child: RefreshIndicator(
-          onRefresh: () async {
-            _refreshBooks();
-          },
+          onRefresh: () async => _refreshBooks(),
           child: FutureBuilder<List<Book>>(
             future: _futureBooks,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting && _books.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(color: Colors.blue),
-                      SizedBox(height: 16),
-                      Text("Loading books..."),
-                    ],
-                  ),
-                );
+                return const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError && _books.isEmpty) {
-                return Center(
-                  child: Text('Error: ${snapshot.error}'),
-                );
+                return Center(child: Text('Error: ${snapshot.error}'));
               } else if (_books.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.book, size: 100, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text('No books found'),
-                    ],
-                  ),
-                );
+                return const Center(child: Text('No books found'));
               } else {
                 return ListView.builder(
                   controller: _scrollController,
@@ -182,125 +117,64 @@ class _HomePageState extends State<HomePage> {
                   itemCount: _books.length + (_isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == _books.length) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
+                      return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
                     }
-                    
                     final book = _books[index];
                     final isBookmarked = bookmarkProvider.isBookmarked(book.id);
-                    
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 16),
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => BookDetailPage(book: book),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BookDetailPage(book: book))),
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Book cover
+                              // --- BAGIAN PERBAIKAN GAMBAR ---
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
                                   book.coverImage,
-                                  width: 100,
-                                  height: 150,
+                                  width: 80,
+                                  height: 120,
                                   fit: BoxFit.cover,
+                                  // Menangani jika gambar gagal load (Error 404 dll)
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
-                                      width: 100,
-                                      height: 150,
-                                      color: Colors.grey.shade300,
-                                      child: const Icon(Icons.book, size: 50),
+                                      width: 80,
+                                      height: 120,
+                                      color: Colors.grey.shade200,
+                                      child: const Icon(Icons.book, color: Colors.grey, size: 40),
                                     );
                                   },
                                 ),
                               ),
+                              // ------------------------------
                               const SizedBox(width: 16),
-                              
-                              // Book info
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      book.title,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                    Text(book.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      'Author: ${book.author}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Category: ${book.category}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
+                                    Text(book.author, style: TextStyle(color: Colors.grey.shade600)),
                                     const SizedBox(height: 8),
-                                    Text(
-                                      book.summary,
-                                      style: const TextStyle(fontSize: 14),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    
-                                    // Bookmark button
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        IconButton(
-                                          icon: Icon(
-                                            isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                                            color: isBookmarked ? Colors.blue : null,
-                                          ),
-                                          onPressed: () async {
-                                            if (isBookmarked) {
-                                              // Remove bookmark
-                                              final bookmark = bookmarkProvider.getBookmarkByBookId(book.id);
-                                              if (bookmark != null) {
-                                                await bookmarkProvider.deleteBookmark(bookmark);
-                                              }
-                                            } else {
-                                              // Add bookmark
-                                              await bookmarkProvider.addBookmark(
-                                                authProvider.user!.id,
-                                                book,
-                                              );
-                                            }
-                                          },
-                                        ),
-                                      ],
-                                    ),
+                                    Text(book.summary, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
                                   ],
                                 ),
+                              ),
+                              IconButton(
+                                icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border, color: isBookmarked ? Colors.blue : null),
+                                onPressed: () async {
+                                  if (isBookmarked) {
+                                    final b = bookmarkProvider.getBookmarkByBookId(book.id);
+                                    if (b != null) await bookmarkProvider.deleteBookmark(b);
+                                  } else {
+                                    await bookmarkProvider.addBookmark(authProvider.user!.id, book);
+                                  }
+                                },
                               ),
                             ],
                           ),
@@ -313,6 +187,31 @@ class _HomePageState extends State<HomePage> {
             },
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        elevation: 10,
+        onTap: (index) {
+          setState(() => _selectedIndex = index);
+          if (index == 1) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const BookmarkPage()));
+          } else if (index == 2) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchPage()));
+          } else if (index == 3) {
+            authProvider.logout();
+            Navigator.of(context).pushReplacementNamed('/login');
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Simpan'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Cari'),
+          BottomNavigationBarItem(icon: Icon(Icons.logout), label: 'Keluar'),
+        ],
       ),
     );
   }
