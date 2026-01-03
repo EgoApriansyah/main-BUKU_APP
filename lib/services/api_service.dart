@@ -55,20 +55,27 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> addBookmark(
-      int userId, String bookId, String bookTitle, String bookAuthor, String bookCover) async {
+    int userId, 
+    String bookId, 
+    String title, 
+    String author, 
+    String cover,
+    String description, // Tambah Parameter
+    Map<String, dynamic> details // Tambah Parameter
+  ) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl?action=add_bookmark'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
+      Uri.parse("$_baseUrl?action=add_bookmark"),
+      body: jsonEncode({
         'user_id': userId,
         'book_id': bookId,
-        'book_title': bookTitle,
-        'book_author': bookAuthor,
-        'book_cover': bookCover,
+        'book_title': title,
+        'book_author': author,
+        'book_cover': cover,
+        'book_description': description, // Kirim ke PHP
+        'book_details': details, // Kirim ke PHP
       }),
     );
-
-    return json.decode(response.body);
+    return jsonDecode(response.body);
   }
 
   static Future<Map<String, dynamic>> updateBookmark(
@@ -95,3 +102,4 @@ class ApiService {
     return json.decode(response.body);
   }
 }
+

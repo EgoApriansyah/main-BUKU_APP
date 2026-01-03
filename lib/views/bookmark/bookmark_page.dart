@@ -249,14 +249,14 @@ class _BookmarkPageState extends State<BookmarkPage> {
 extension BookmarkToBook on Bookmark {
   Book toBook() {
     return Book(
-      id: bookId,
+      id: bookId, // Pastikan tipe data id di model Book adalah String
       title: bookTitle,
       coverImage: bookCover,
       author: bookAuthor,
       category: 'Saved', 
-      summary: '', // Akan di-load ulang di detail page jika perlu
-      details: {},
-      tags: [],
+      summary: bookDescription, // Data summary diambil dari DB
+      details: bookDetails,     // Data details diambil dari DB
+      tags: ['Saved'],
     );
   }
 }

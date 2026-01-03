@@ -43,40 +43,39 @@ class BookmarkProvider with ChangeNotifier {
   // ADD BOOKMARK
   // ===================================
   Future<bool> addBookmark(int userId, Book book) async {
-    _isLoading = true;
-    notifyListeners();
+  _isLoading = true;
+  notifyListeners();
 
-    try {
-      final response = await ApiService.addBookmark(
-        userId,
-        book.id,
-        book.title,
-        book.author,
-        book.coverImage,
+  try {
+    final response = await ApiService.addBookmark(
+      userId,
+      book.id,
+      book.title,
+      book.author,
+      book.coverImage,
+      book.summary, // Ambil dari model Book
+      book.details, // Ambil dari model Book
+    );
+
+    if (response['status'] == 1) {
+      await loadBookmarks(userId);
+      await NotificationHelper.showNotification(
+        'Bookmark Added',
+        '"${book.title}" berhasil disimpan secara permanen.',
       );
-
-      // Sesuai api.php: status 1 berarti sukses
-      if (response['status'] == 1) {
-        // Setelah sukses di DB, kita tarik data terbaru agar sinkron
-        await loadBookmarks(userId);
-
-        await NotificationHelper.showNotification(
-          'Bookmark Added',
-          '"${book.title}" ditambahkan ke bookmark',
-        );
-        return true;
-      } else {
-        _errorMessage = response['message'];
-        return false;
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
+      return true;
+    } else {
+      _errorMessage = response['message'];
       return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+  } catch (e) {
+    _errorMessage = e.toString();
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
+}
 
   // ===================================
   // DELETE BOOKMARK
