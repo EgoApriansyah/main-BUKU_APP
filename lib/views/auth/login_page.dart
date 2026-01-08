@@ -28,14 +28,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade50,
-              Colors.white,
-            ],
-          ),
+          color: Colors.white
         ),
         child: Center(
           child: SingleChildScrollView(
@@ -46,23 +39,15 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.book,
-                      size: 80,
-                      color: Colors.blue.shade700,
-                    ),
+                  Image.asset(
+                    'assets/login.png',
+                    height: 160,
                   ),
                   const SizedBox(height: 24),
                   
                   // Title
                   Text(
-                    'Buku App',
+                    'SinopZ',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,

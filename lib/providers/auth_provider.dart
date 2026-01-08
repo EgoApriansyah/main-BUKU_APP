@@ -13,27 +13,22 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
 
-  /// ============================
-  /// CHECK AUTH (APP START)
-  /// ============================
-  /// ❌ TANPA loading
-  /// ❌ TANPA notifyListeners di awal
+  // ============================
+  // CHECK AUTH (APP START)
+  // ============================
   Future<void> checkAuthStatus() async {
     try {
-      final user = await AuthService.getUser();
-      if (user != null) {
-        _user = user;
-      }
+      final savedUser = await AuthService.getUser();
+      _user = savedUser;
     } catch (e) {
       _errorMessage = e.toString();
     }
-
-    notifyListeners(); // aman (dipanggil SETELAH await)
+    notifyListeners();
   }
 
-  /// ============================
-  /// LOGIN
-  /// ============================
+  // ============================
+  // LOGIN
+  // ============================
   Future<bool> login(String username, String password) async {
     _isLoading = true;
     _errorMessage = null;
@@ -59,9 +54,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// ============================
-  /// REGISTER
-  /// ============================
+  // ============================
+  // REGISTER
+  // ============================
   Future<bool> register(String username, String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
@@ -88,9 +83,59 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// ============================
-  /// LOGOUT
-  /// ============================
+  // ============================
+  // UPDATE PROFILE (FIX UTAMA)
+  // ============================
+  Future<bool> updateProfile({
+    required int userId,
+    required String username,
+    String? imagePath,
+  }) async {
+    if (_user == null) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await ApiService.updateProfile(
+        userId: userId,
+        username: username,
+        imagePath: imagePath,
+      );
+
+      if (response['status'] == 1) {
+        final updatedUser = response['user'];
+
+        /// 🔥 UPDATE STATE USER (INI KUNCI)
+        _user = _user!.copyWith(
+          username: updatedUser['username'],
+          profilePicture: updatedUser['profile_picture'],
+        );
+
+        /// 🔥 SYNC KE LOCAL STORAGE
+        await AuthService.saveUser(_user!);
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ============================
+  // LOGOUT (AMAN & BERSIH)
+  // ============================
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
@@ -106,9 +151,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// ============================
-  /// CLEAR ERROR
-  /// ============================
+  // ============================
+  // CLEAR ERROR
+  // ============================
   void clearError() {
     _errorMessage = null;
     notifyListeners();

@@ -32,14 +32,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade50,
-              Colors.white,
-            ],
-          ),
+          color: Colors.white
         ),
         child: Center(
           child: SingleChildScrollView(
@@ -49,18 +42,9 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.book,
-                      size: 80,
-                      color: Colors.blue.shade700,
-                    ),
+                  Image.asset(
+                    'assets/register.png',
+                    height: 130,
                   ),
                   const SizedBox(height: 24),
                   

@@ -101,5 +101,28 @@ class ApiService {
 
     return json.decode(response.body);
   }
+
+  static Future<Map<String, dynamic>> updateProfile({
+  required int userId,
+  required String username,
+  String? imagePath,
+}) async {
+  final uri = Uri.parse('$_baseUrl?action=update_profile');
+  final request = http.MultipartRequest('POST', uri);
+
+  request.fields['user_id'] = userId.toString();
+  request.fields['username'] = username;
+
+  if (imagePath != null) {
+    request.files.add(
+      await http.MultipartFile.fromPath('profile_picture', imagePath),
+    );
+  }
+
+  final response = await request.send();
+  final responseBody = await response.stream.bytesToString();
+  return jsonDecode(responseBody);
+}
+
 }
 

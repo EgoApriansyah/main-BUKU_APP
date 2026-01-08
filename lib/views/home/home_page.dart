@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/bookmark_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,6 +14,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late YoutubePlayerController _ytController;
+
+  Future<void> _openYoutubePlaylist() async {
+  final Uri url = Uri.parse(
+    'https://www.youtube.com/watch?v=4pmVmRl44xM&list=PLzaa23DHU8XHR6zFU-WUYPvyYbCl0BwA2',
+  );
+
+  if (!await launchUrl(
+    url,
+    mode: LaunchMode.externalApplication,
+  )) {
+    throw 'Tidak bisa membuka YouTube';
+  }
+}
+
 
   @override
   void initState() {
@@ -59,7 +74,7 @@ class _HomePageState extends State<HomePage> {
               title: Row(
                 children: [
                   const Text(
-                    "Rak Kita",
+                    "SinopZ",
                     style: TextStyle(
                       color: Color(0xFF1A1A1A),
                       fontWeight: FontWeight.bold,
@@ -220,7 +235,18 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
         if (action != null)
-          Text(action, style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.w600, fontSize: 13)),
+  GestureDetector(
+    onTap: _openYoutubePlaylist,
+    child: Text(
+      action,
+      style: const TextStyle(
+        color: Colors.blueAccent,
+        fontWeight: FontWeight.w600,
+        fontSize: 13,
+      ),
+    ),
+  ),
+
       ],
     );
   }
